@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>三位數乘兩位數乘法練習</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: #334155;
+            padding: 1rem;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 2.5rem;
+            border-radius: 1.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            max-width: 42rem;
+            width: 100%;
+            text-align: center;
+        }
+        .question-box {
+            background-color: #f8fafc;
+            border: 2px dashed #cbd5e1;
+            padding: 2rem;
+            border-radius: 1rem;
+            margin-bottom: 2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .correct-answer-box {
+            background-color: #f0fdf4;
+            border: 2px solid #22c55e;
+            padding: 1.5rem;
+            border-radius: 1rem;
+            margin-top: 1.5rem;
+            text-align: left;
+            white-space: pre;
+            font-family: 'Courier New', Courier, monospace;
+        }
+        .line {
+            height: 2px;
+            background-color: #94a3b8;
+            width: 100%;
+        }
+        .vertical-line {
+            position: relative;
+            margin-top: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .vertical-line::before {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0%;
+            height: 2px;
+            background-color: #0f172a;
+        }
+        @keyframes success-animation {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+        .animate-success {
+            animation: success-animation 0.5s ease-in-out;
+        }
+        .leaderboard-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        .leaderboard-table th, .leaderboard-table td {
+            padding: 0.75rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+
+    <div id="app" class="container space-y-6">
+        <div id="start-screen" class="space-y-6">
+            <div class="text-right text-xl font-bold text-gray-700">
+                分數: <span id="score">0</span> / 6
+            </div>
+            <h1 class="text-3xl font-extrabold text-indigo-600">三位數乘兩位數乘法練習</h1>
+            <p class="text-gray-600">正確回答六道題目以通關！</p>
+            <button id="start-button" class="px-8 py-4 bg-indigo-500 text-white font-bold rounded-full shadow-lg hover:bg-indigo-600 transition transform hover:scale-105">開始</button>
+        </div>
+
+        <div id="game-screen" class="hidden space-y-6">
+            <div class="text-right text-xl font-bold text-gray-700">
+                分數: <span id="score-game">0</span> / 6
+            </div>
+            <h2 class="text-2xl font-bold text-gray-700">請計算：</h2>
+            <div class="question-box">
+                <div class="text-4xl font-extrabold text-blue-800">
+                    <span id="num1"></span> × <span id="num2"></span>
+                </div>
+            </div>
+            <input type="number" id="answer-input" inputmode="numeric" placeholder="請輸入答案" class="w-full px-4 py-3 text-center text-xl rounded-xl border-2 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+            <button id="submit-button" class="w-full px-6 py-3 bg-blue-500 text-white font-bold rounded-full shadow-lg hover:bg-blue-600 transition transform hover:scale-105">提交</button>
+
+            <div id="feedback-message" class="mt-4 text-center text-xl font-semibold"></div>
+            <div id="correct-answer-display" class="hidden mt-4">
+                <h3 class="text-xl font-bold text-green-600 mb-2">正確答案是：</h3>
+                <div id="vertical-multiplication" class="bg-green-50 p-6 rounded-lg shadow-inner text-left whitespace-pre-wrap text-lg font-mono"></div>
+            </div>
+            <div id="next-question-container" class="mt-4 hidden">
+                <button id="next-question-button" class="w-full px-6 py-3 bg-gray-500 text-white font-bold rounded-full shadow-lg hover:bg-gray-600 transition transform hover:scale-105">下一題</button>
+            </div>
+        </div>
+
+        <div id="finish-screen" class="hidden space-y-6">
+            <div class="text-right text-xl font-bold text-gray-700">
+                分數: <span id="score-finish">0</span> / 6
+            </div>
+            <h2 class="text-3xl font-extrabold text-green-600">恭喜通關！</h2>
+            <p id="time-taken" class="text-lg font-semibold text-gray-700"></p>
+            <div class="flex flex-col items-center">
+                <div id="teacher-emoji" class="text-8xl mb-2"></div>
+                <div class="text-lg font-semibold text-gray-700">廖老師</div>
+                <p id="teacher-quote" class="text-xl italic text-gray-700">
+                    「4A班的大家，恭喜你們通關。記住多練習乘法計算，計得多自然識。」
+                </p>
+            </div>
+            <div id="leaderboard-entry" class="mt-4 hidden space-y-4">
+                <h3 class="text-xl font-bold text-gray-700">恭喜你完成挑戰！</h3>
+                <p>請輸入你的名字以加入排行榜：</p>
+                <input type="text" id="player-name" placeholder="你的名字" class="w-full px-4 py-2 text-center rounded-xl border-2 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+                <button id="submit-score-button" class="w-full px-6 py-3 bg-blue-500 text-white font-bold rounded-full shadow-lg hover:bg-blue-600 transition transform hover:scale-105">提交分數</button>
+            </div>
+            <h3 class="text-2xl font-bold text-gray-700 mt-6">排行榜</h3>
+            <div id="leaderboard-display" class="mt-4">
+                <table class="leaderboard-table">
+                    <thead>
+                        <tr class="bg-gray-200">
+                            <th class="rounded-tl-lg">排名</th>
+                            <th>名字</th>
+                            <th class="rounded-tr-lg">時間 (秒)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="leaderboard-body">
+                        <!-- 排行榜條目將會插入這裡 -->
+                    </tbody>
+                </table>
+            </div>
+            <button id="restart-button" class="px-8 py-4 bg-purple-500 text-white font-bold rounded-full shadow-lg hover:bg-purple-600 transition transform hover:scale-105">重新開始</button>
+        </div>
+    </div>
+
+    <script>
+        // Setup Tone.js for sounds
+        const correctSynth = new Tone.Synth().toDestination();
+        const wrongSynth = new Tone.Synth({
+            oscillator: { type: "square" },
+            envelope: {
+                attack: 0.001,
+                decay: 0.1,
+                sustain: 0,
+                release: 0.1
+            }
+        }).toDestination();
+
+        // Get all the DOM elements
+        const startScreen = document.getElementById('start-screen');
+        const gameScreen = document.getElementById('game-screen');
+        const finishScreen = document.getElementById('finish-screen');
+        const startButton = document.getElementById('start-button');
+        const submitButton = document.getElementById('submit-button');
+        const restartButton = document.getElementById('restart-button');
+        const nextQuestionButton = document.getElementById('next-question-button');
+        const nextQuestionContainer = document.getElementById('next-question-container');
+        const num1Span = document.getElementById('num1');
+        const num2Span = document.getElementById('num2');
+        const answerInput = document.getElementById('answer-input');
+        const scoreSpan = document.getElementById('score');
+        const scoreGameSpan = document.getElementById('score-game');
+        const scoreFinishSpan = document.getElementById('score-finish');
+        const feedbackMessage = document.getElementById('feedback-message');
+        const correctAnswerDisplay = document.getElementById('correct-answer-display');
+        const verticalMultiplication = document.getElementById('vertical-multiplication');
+        const timeTakenDisplay = document.getElementById('time-taken');
+        const leaderboardEntry = document.getElementById('leaderboard-entry');
+        const playerNameInput = document.getElementById('player-name');
+        const submitScoreButton = document.getElementById('submit-score-button');
+        const leaderboardBody = document.getElementById('leaderboard-body');
+        const teacherEmoji = document.getElementById('teacher-emoji');
+        
+        const LEADERBOARD_KEY = 'multiplication_leaderboard';
+
+        let questions = [];
+        let score = 0;
+        let correctCount = 0;
+        let startTime = 0;
+        let finalTime = 0;
+        let currentRank = 0;
+
+        const teacherEmojis = ["(^_−)☆", "(*^_^*)", "(⌒▽⌒)", "(・ω・)", "(๑>◡<๑)", "( ´ ▽ ` )ﾉ", "(^_^)/"];
+        
+        // Generate a new multiplication question
+        function generateQuestion(isRoundNumber = false) {
+            if (isRoundNumber) {
+                const type = Math.random() < 0.5 ? 'tens' : 'hundreds';
+                let num1 = Math.floor(Math.random() * 900) + 100;
+                let num2 = Math.floor(Math.random() * 90) + 10;
+                if (type === 'tens') {
+                    num2 = (Math.floor(Math.random() * 9) + 1) * 10;
+                } else {
+                    num1 = (Math.floor(Math.random() * 9) + 1) * 100;
+                    num2 = (Math.floor(Math.random() * 9) + 1) * 10;
+                }
+                return {
+                    num1,
+                    num2,
+                    answer: num1 * num2
+                };
+            } else {
+                const num1 = Math.floor(Math.random() * 900) + 100; // 100-999
+                const num2 = Math.floor(Math.random() * 90) + 10;   // 10-99
+                return {
+                    num1,
+                    num2,
+                    answer: num1 * num2
+                };
+            }
+        }
+
+        // Generate the initial set of questions
+        function generateQuestions(count) {
+            questions = [];
+            questions.push(generateQuestion(true)); // First question is a round number
+            questions.push(generateQuestion(true)); // Second question is a round number
+            for (let i = 2; i < count; i++) {
+                questions.push(generateQuestion());
+            }
+        }
+
+        // Show the next question or the finish screen
+        function showNextQuestion() {
+            if (correctCount >= 6) {
+                showFinishScreen();
+                return;
+            }
+            correctAnswerDisplay.classList.add('hidden');
+            
+            const currentQuestion = questions.shift();
+            if (!currentQuestion) {
+                 questions.push(generateQuestion());
+                 showNextQuestion();
+                 return;
+            }
+
+            num1Span.textContent = currentQuestion.num1;
+            num2Span.textContent = currentQuestion.num2;
+            answerInput.value = '';
+            feedbackMessage.textContent = '';
+            feedbackMessage.classList.remove('animate-success');
+            nextQuestionContainer.classList.add('hidden');
+            submitButton.disabled = false;
+            answerInput.disabled = false;
+        }
+
+        // Display the vertical multiplication breakdown
+        function showVerticalMultiplication(num1, num2) {
+            const result = num1 * num2;
+            const line1 = num1.toString().padStart(6);
+            const line2 = '× ' + num2.toString().padStart(4);
+            
+            const partial1 = (num1 * (num2 % 10)).toString();
+            const partial2 = (num1 * Math.floor(num2 / 10)).toString();
+            const line4 = partial1.padStart(6);
+            const line5 = partial2.padStart(6 - 1) + '0';
+            const line6 = '-'.repeat(6);
+            const line7 = result.toString().padStart(6);
+            
+            verticalMultiplication.innerHTML = `
+                <div class="text-right">${line1}</div>
+                <div class="text-right">${line2}</div>
+                <div class="vertical-line"></div>
+                <div class="text-right">${line4}</div>
+                <div class="text-right">${line5}</div>
+                <div class="vertical-line"></div>
+                <div class="text-right font-bold text-green-700 text-2xl">${line7}</div>
+            `;
+            
+        }
+        
+        // Play sound for correct answer
+        function playCorrectSound() {
+            correctSynth.triggerAttackRelease("C5", "8n");
+        }
+
+        // Play sound for wrong answer
+        function playWrongSound() {
+            wrongSynth.triggerAttackRelease("C3", "8n");
+        }
+
+        // Check the user's answer
+        function checkAnswer() {
+            const userAnswer = parseInt(answerInput.value, 10);
+            if (isNaN(userAnswer)) {
+                feedbackMessage.textContent = '請輸入一個數字！';
+                feedbackMessage.className = 'mt-4 text-center text-red-500 text-xl font-semibold';
+                return;
+            }
+
+            const currentQuestion = {
+                num1: parseInt(num1Span.textContent),
+                num2: parseInt(num2Span.textContent),
+                answer: parseInt(num1Span.textContent) * parseInt(num2Span.textContent)
+            };
+
+            if (userAnswer === currentQuestion.answer) {
+                feedbackMessage.textContent = '答對了！';
+                feedbackMessage.className = 'mt-4 text-center text-green-600 text-xl font-semibold animate-success';
+                playCorrectSound();
+                score++;
+                correctCount++;
+                scoreSpan.textContent = correctCount;
+                scoreGameSpan.textContent = correctCount;
+                submitButton.disabled = true;
+                answerInput.disabled = true;
+                setTimeout(showNextQuestion, 1000);
+            } else {
+                feedbackMessage.textContent = '答錯了，請看正確答案。';
+                feedbackMessage.className = 'mt-4 text-center text-red-600 text-xl font-semibold';
+                playWrongSound();
+                correctAnswerDisplay.classList.remove('hidden'); // Ensure the display is not hidden
+                showVerticalMultiplication(currentQuestion.num1, currentQuestion.num2);
+                nextQuestionContainer.classList.remove('hidden');
+                submitButton.disabled = true;
+                answerInput.disabled = true;
+            }
+        }
+
+        // Show the final screen with time taken and leaderboard
+        function showFinishScreen() {
+            const endTime = Date.now();
+            finalTime = Math.round((endTime - startTime) / 1000);
+            timeTakenDisplay.textContent = `你的完成時間是：${finalTime} 秒`;
+            
+            // 隨機選取顏文字
+            const randomIndex = Math.floor(Math.random() * teacherEmojis.length);
+            teacherEmoji.textContent = teacherEmojis[randomIndex];
+            
+            gameScreen.classList.add('hidden');
+            finishScreen.classList.remove('hidden');
+            leaderboardEntry.classList.remove('hidden');
+            scoreFinishSpan.textContent = correctCount;
+            
+            // 載入並顯示排行榜
+            loadAndDisplayLeaderboard();
+        }
+
+        // Display the leaderboard from localStorage
+        function displayLeaderboard(leaderboard) {
+            leaderboardBody.innerHTML = '';
+            leaderboard.forEach((entry, index) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="rounded-bl-lg">${index + 1}</td>
+                    <td>${entry.name}</td>
+                    <td class="rounded-br-lg">${entry.time}</td>
+                `;
+                leaderboardBody.appendChild(row);
+            });
+            // Find current rank for encouragement message
+            const myRank = leaderboard.findIndex(entry => entry.time === finalTime) + 1;
+            currentRank = myRank;
+        }
+
+        // Save the user's score to localStorage
+        function saveScore() {
+            const playerName = playerNameInput.value.trim() || '匿名玩家';
+            
+            // 獲取現有的排行榜資料
+            let leaderboard = JSON.parse(localStorage.getItem(LEADERBOARD_KEY)) || [];
+
+            // 加入新的分數
+            leaderboard.push({ name: playerName, time: finalTime });
+
+            // 依時間排序並只保留前十名
+            leaderboard.sort((a, b) => a.time - b.time);
+            leaderboard = leaderboard.slice(0, 10);
+
+            // 儲存回 localStorage
+            localStorage.setItem(LEADERBOARD_KEY, JSON.stringify(leaderboard));
+            
+            // 重新顯示排行榜
+            displayLeaderboard(leaderboard);
+            leaderboardEntry.classList.add('hidden');
+        }
+
+        // Load and display leaderboard on page load
+        function loadAndDisplayLeaderboard() {
+            const leaderboard = JSON.parse(localStorage.getItem(LEADERBOARD_KEY)) || [];
+            displayLeaderboard(leaderboard);
+        }
+
+        // Reset the game to the starting state
+        function resetGame() {
+            score = 0;
+            correctCount = 0;
+            scoreSpan.textContent = correctCount;
+            scoreGameSpan.textContent = correctCount;
+            scoreFinishSpan.textContent = correctCount;
+            startScreen.classList.remove('hidden');
+            gameScreen.classList.add('hidden');
+            finishScreen.classList.add('hidden');
+            leaderboardEntry.classList.add('hidden');
+            playerNameInput.value = '';
+            generateQuestions(6);
+            showNextQuestion();
+            loadAndDisplayLeaderboard();
+        }
+        
+        // Event Listeners
+        startButton.addEventListener('click', () => {
+            startScreen.classList.add('hidden');
+            gameScreen.classList.remove('hidden');
+            startTime = Date.now();
+            generateQuestions(6);
+            showNextQuestion();
+        });
+
+        submitButton.addEventListener('click', checkAnswer);
+        restartButton.addEventListener('click', resetGame);
+        nextQuestionButton.addEventListener('click', showNextQuestion);
+        submitScoreButton.addEventListener('click', saveScore);
+
+        answerInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                checkAnswer();
+            }
+        });
+        
+        // 頁面載入時載入排行榜
+        window.onload = loadAndDisplayLeaderboard;
+    </script>
+
+</body>
+</html>
