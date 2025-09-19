@@ -88,9 +88,6 @@
 <body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
 
     <div id="app" class="container space-y-6">
-        <div class="absolute top-4 right-4 text-xs text-gray-400 select-none">
-            <span id="user-id-display"></span>
-        </div>
         <div id="start-screen" class="space-y-6">
             <div class="text-right text-xl font-bold text-gray-700">
                 分數: <span id="score">0</span> / 6
@@ -161,23 +158,7 @@
         </div>
     </div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, onSnapshot, query, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        
-        setLogLevel('debug');
-
-        // Global variables for Firebase
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-
-        let app, auth, db, userId;
-        const leaderboardPath = `/artifacts/${appId}/public/data/leaderboard`;
-        const LEADERBOARD_MAX_ENTRIES = 10;
-        
+    <script>
         // Setup Tone.js for sounds
         const correctSynth = new Tone.Synth().toDestination();
         const wrongSynth = new Tone.Synth({
@@ -214,7 +195,8 @@
         const submitScoreButton = document.getElementById('submit-score-button');
         const leaderboardBody = document.getElementById('leaderboard-body');
         const teacherEmoji = document.getElementById('teacher-emoji');
-        const userIdDisplay = document.getElementById('user-id-display');
+        
+        const LEADERBOARD_KEY = 'multiplication_leaderboard';
 
         let questions = [];
         let score = 0;
@@ -224,57 +206,6 @@
         let currentRank = 0;
 
         const teacherEmojis = ["(^_−)☆", "(*^_^*)", "(⌒▽⌒)", "(・ω・)", "(๑>◡<๑)", "( ´ ▽ ` )ﾉ", "(^_^)/"];
-        
-        // Initialize Firebase and set up authentication
-        async function initializeFirebase() {
-            try {
-                if (Object.keys(firebaseConfig).length > 0) {
-                    app = initializeApp(firebaseConfig);
-                    auth = getAuth(app);
-                    db = getFirestore(app);
-
-                    onAuthStateChanged(auth, (user) => {
-                        if (user) {
-                            userId = user.uid;
-                            userIdDisplay.textContent = `您的ID: ${userId}`;
-                            setupLeaderboardListener();
-                        } else {
-                            userId = 'unknown';
-                            userIdDisplay.textContent = '登入中...';
-                        }
-                    });
-
-                    if (initialAuthToken) {
-                        await signInWithCustomToken(auth, initialAuthToken);
-                    } else {
-                        await signInAnonymously(auth);
-                    }
-                } else {
-                     userIdDisplay.textContent = "Firebase未配置";
-                     console.error("Firebase is not configured. Leaderboard will not work.");
-                }
-            } catch (error) {
-                console.error("Firebase initialization failed:", error);
-            }
-        }
-
-        // Set up real-time listener for the leaderboard
-        function setupLeaderboardListener() {
-            try {
-                const q = query(collection(db, leaderboardPath));
-                onSnapshot(q, (snapshot) => {
-                    const leaderboard = [];
-                    snapshot.forEach((doc) => {
-                        leaderboard.push(doc.data());
-                    });
-                    
-                    leaderboard.sort((a, b) => a.time - b.time);
-                    displayLeaderboard(leaderboard.slice(0, LEADERBOARD_MAX_ENTRIES));
-                });
-            } catch (error) {
-                console.error("Error setting up leaderboard listener:", error);
-            }
-        }
         
         // Generate a new multiplication question
         function generateQuestion(isRoundNumber = false) {
@@ -426,9 +357,12 @@
             finishScreen.classList.remove('hidden');
             leaderboardEntry.classList.remove('hidden');
             scoreFinishSpan.textContent = correctCount;
+            
+            // 載入並顯示排行榜
+            loadAndDisplayLeaderboard();
         }
 
-        // Display the leaderboard from Firestore
+        // Display the leaderboard from localStorage
         function displayLeaderboard(leaderboard) {
             leaderboardBody.innerHTML = '';
             leaderboard.forEach((entry, index) => {
@@ -440,27 +374,37 @@
                 `;
                 leaderboardBody.appendChild(row);
             });
+            // Find current rank for encouragement message
+            const myRank = leaderboard.findIndex(entry => entry.time === finalTime) + 1;
+            currentRank = myRank;
         }
 
-        // Save the user's score to Firestore
-        async function saveScore() {
-            if (!db) {
-                console.error("Firestore not initialized.");
-                return;
-            }
+        // Save the user's score to localStorage
+        function saveScore() {
             const playerName = playerNameInput.value.trim() || '匿名玩家';
             
-            try {
-                await addDoc(collection(db, leaderboardPath), {
-                    name: playerName,
-                    time: finalTime,
-                    timestamp: new Date(),
-                    userId: userId
-                });
-                leaderboardEntry.classList.add('hidden');
-            } catch (error) {
-                console.error("Error writing document: ", error);
-            }
+            // 獲取現有的排行榜資料
+            let leaderboard = JSON.parse(localStorage.getItem(LEADERBOARD_KEY)) || [];
+
+            // 加入新的分數
+            leaderboard.push({ name: playerName, time: finalTime });
+
+            // 依時間排序並只保留前十名
+            leaderboard.sort((a, b) => a.time - b.time);
+            leaderboard = leaderboard.slice(0, 10);
+
+            // 儲存回 localStorage
+            localStorage.setItem(LEADERBOARD_KEY, JSON.stringify(leaderboard));
+            
+            // 重新顯示排行榜
+            displayLeaderboard(leaderboard);
+            leaderboardEntry.classList.add('hidden');
+        }
+
+        // Load and display leaderboard on page load
+        function loadAndDisplayLeaderboard() {
+            const leaderboard = JSON.parse(localStorage.getItem(LEADERBOARD_KEY)) || [];
+            displayLeaderboard(leaderboard);
         }
 
         // Reset the game to the starting state
@@ -477,6 +421,7 @@
             playerNameInput.value = '';
             generateQuestions(6);
             showNextQuestion();
+            loadAndDisplayLeaderboard();
         }
         
         // Event Listeners
@@ -499,8 +444,8 @@
             }
         });
         
-        // Initialize Firebase on page load
-        window.onload = initializeFirebase;
+        // 頁面載入時載入排行榜
+        window.onload = loadAndDisplayLeaderboard;
     </script>
 
 </body>
