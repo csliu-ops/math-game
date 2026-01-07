@@ -1,452 +1,332 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>三位數乘兩位數乘法練習</title>
+    <title>質數大挑戰小遊戲</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f0f4f8;
+            background-color: #f0f9ff;
+            user-select: none;
+        }
+        .game-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        /* 網格按鈕樣式 */
+        .number-btn {
+            aspect-ratio: 1;
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 100vh;
-            color: #334155;
-            padding: 1rem;
+            background-color: white;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 1.1rem;
+            color: #374151;
+            box-shadow: 0 4px 0 #e5e7eb;
+            transition: all 0.1s;
+            cursor: pointer;
+            border: 2px solid #e5e7eb;
         }
-        .container {
-            background-color: #ffffff;
-            padding: 2.5rem;
-            border-radius: 1.5rem;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-            max-width: 42rem;
-            width: 100%;
-            text-align: center;
+        .number-btn:active {
+            transform: translateY(4px);
+            box-shadow: 0 0 0 #e5e7eb;
         }
-        .question-box {
-            background-color: #f8fafc;
-            border: 2px dashed #cbd5e1;
-            padding: 2rem;
-            border-radius: 1rem;
-            margin-bottom: 2rem;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+
+        /* 狀態樣式 */
+        .number-btn.correct {
+            background-color: #fbbf24; /* Amber-400 */
+            color: #78350f;
+            border-color: #d97706;
+            box-shadow: 0 4px 0 #d97706;
+            animation: pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            pointer-events: none;
         }
-        .correct-answer-box {
-            background-color: #f0fdf4;
-            border: 2px solid #22c55e;
-            padding: 1.5rem;
-            border-radius: 1rem;
-            margin-top: 1.5rem;
-            text-align: left;
-            white-space: pre;
-            font-family: 'Courier New', Courier, monospace;
+        .number-btn.correct:active {
+            box-shadow: 0 0 0 #d97706;
         }
-        .line {
-            height: 2px;
-            background-color: #94a3b8;
-            width: 100%;
+
+        .number-btn.wrong {
+            background-color: #fca5a5; /* Red-300 */
+            color: #7f1d1d;
+            border-color: #ef4444;
+            box-shadow: 0 4px 0 #b91c1c;
+            animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
         }
-        .vertical-line {
-            position: relative;
-            margin-top: 0.5rem;
-            margin-bottom: 0.5rem;
-        }
-        .vertical-line::before {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 0%;
-            height: 2px;
-            background-color: #0f172a;
-        }
-        @keyframes success-animation {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.2); }
+
+        /* 動畫 */
+        @keyframes pop {
+            0% { transform: scale(0.8); }
+            50% { transform: scale(1.1); }
             100% { transform: scale(1); }
         }
-        .animate-success {
-            animation: success-animation 0.5s ease-in-out;
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-1px, 0, 0); }
+            20%, 80% { transform: translate3d(2px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+            40%, 60% { transform: translate3d(4px, 0, 0); }
         }
-        .leaderboard-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 1rem;
+
+        /* 遊戲結束/開始 遮罩 */
+        .modal-overlay {
+            background-color: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(4px);
         }
-        .leaderboard-table th, .leaderboard-table td {
-            padding: 0.75rem;
-            border-bottom: 1px solid #e2e8f0;
+
+        /* 響應式調整 */
+        @media (max-width: 640px) {
+            .number-btn {
+                font-size: 0.9rem;
+                border-radius: 4px;
+                box-shadow: 0 2px 0 #e5e7eb;
+            }
+            .number-btn.correct { box-shadow: 0 2px 0 #d97706; }
+            .number-btn.wrong { box-shadow: 0 2px 0 #b91c1c; }
         }
     </style>
 </head>
-<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+<body class="min-h-screen p-4 flex flex-col items-center">
 
-    <div id="app" class="container space-y-6">
-        <div id="start-screen" class="space-y-6">
-            <div class="text-right text-xl font-bold text-gray-700">
-                分數: <span id="score">0</span> / 6
-            </div>
-            <h1 class="text-3xl font-extrabold text-indigo-600">三位數乘兩位數乘法練習</h1>
-            <p class="text-gray-600">正確回答六道題目以通關！</p>
-            <button id="start-button" class="px-8 py-4 bg-indigo-500 text-white font-bold rounded-full shadow-lg hover:bg-indigo-600 transition transform hover:scale-105">開始</button>
+    <!-- Header / Stats -->
+    <div class="game-container w-full mb-4 flex justify-between items-center bg-white p-4 rounded-2xl shadow-lg border-b-4 border-blue-200">
+        <div class="flex flex-col items-center w-1/3">
+            <span class="text-xs text-gray-500 uppercase font-bold tracking-wider">時間</span>
+            <span id="timer" class="text-3xl font-black text-blue-600 font-mono">00:00</span>
         </div>
-
-        <div id="game-screen" class="hidden space-y-6">
-            <div class="text-right text-xl font-bold text-gray-700">
-                分數: <span id="score-game">0</span> / 6
-            </div>
-            <h2 class="text-2xl font-bold text-gray-700">請計算：</h2>
-            <div class="question-box">
-                <div class="text-4xl font-extrabold text-blue-800">
-                    <span id="num1"></span> × <span id="num2"></span>
-                </div>
-            </div>
-            <input type="number" id="answer-input" inputmode="numeric" placeholder="請輸入答案" class="w-full px-4 py-3 text-center text-xl rounded-xl border-2 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
-            <button id="submit-button" class="w-full px-6 py-3 bg-blue-500 text-white font-bold rounded-full shadow-lg hover:bg-blue-600 transition transform hover:scale-105">提交</button>
-
-            <div id="feedback-message" class="mt-4 text-center text-xl font-semibold"></div>
-            <div id="correct-answer-display" class="hidden mt-4">
-                <h3 class="text-xl font-bold text-green-600 mb-2">正確答案是：</h3>
-                <div id="vertical-multiplication" class="bg-green-50 p-6 rounded-lg shadow-inner text-left whitespace-pre-wrap text-lg font-mono"></div>
-            </div>
-            <div id="next-question-container" class="mt-4 hidden">
-                <button id="next-question-button" class="w-full px-6 py-3 bg-gray-500 text-white font-bold rounded-full shadow-lg hover:bg-gray-600 transition transform hover:scale-105">下一題</button>
-            </div>
+        <div class="flex flex-col items-center w-1/3 border-x border-gray-100">
+            <span class="text-xs text-gray-500 uppercase font-bold tracking-wider">已找到</span>
+            <span class="text-3xl font-black text-yellow-500"><span id="found-count">0</span><span class="text-lg text-gray-400">/25</span></span>
         </div>
-
-        <div id="finish-screen" class="hidden space-y-6">
-            <div class="text-right text-xl font-bold text-gray-700">
-                分數: <span id="score-finish">0</span> / 6
-            </div>
-            <h2 class="text-3xl font-extrabold text-green-600">恭喜通關！</h2>
-            <p id="time-taken" class="text-lg font-semibold text-gray-700"></p>
-            <div class="flex flex-col items-center">
-                <div id="teacher-emoji" class="text-8xl mb-2"></div>
-                <div class="text-lg font-semibold text-gray-700">廖老師</div>
-                <p id="teacher-quote" class="text-xl italic text-gray-700">
-                    「4A班的大家，恭喜你們通關。記住多練習乘法計算，計得多自然識。」
-                </p>
-            </div>
-            <div id="leaderboard-entry" class="mt-4 hidden space-y-4">
-                <h3 class="text-xl font-bold text-gray-700">恭喜你完成挑戰！</h3>
-                <p>請輸入你的名字以加入排行榜：</p>
-                <input type="text" id="player-name" placeholder="你的名字" class="w-full px-4 py-2 text-center rounded-xl border-2 border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
-                <button id="submit-score-button" class="w-full px-6 py-3 bg-blue-500 text-white font-bold rounded-full shadow-lg hover:bg-blue-600 transition transform hover:scale-105">提交分數</button>
-            </div>
-            <h3 class="text-2xl font-bold text-gray-700 mt-6">排行榜</h3>
-            <div id="leaderboard-display" class="mt-4">
-                <table class="leaderboard-table">
-                    <thead>
-                        <tr class="bg-gray-200">
-                            <th class="rounded-tl-lg">排名</th>
-                            <th>名字</th>
-                            <th class="rounded-tr-lg">時間 (秒)</th>
-                        </tr>
-                    </thead>
-                    <tbody id="leaderboard-body">
-                        <!-- 排行榜條目將會插入這裡 -->
-                    </tbody>
-                </table>
-            </div>
-            <button id="restart-button" class="px-8 py-4 bg-purple-500 text-white font-bold rounded-full shadow-lg hover:bg-purple-600 transition transform hover:scale-105">重新開始</button>
+        <div class="flex flex-col items-center w-1/3">
+            <span class="text-xs text-gray-500 uppercase font-bold tracking-wider">得分</span>
+            <span id="score" class="text-3xl font-black text-green-500">0</span>
         </div>
     </div>
 
+    <!-- Message Bar -->
+    <div id="message-bar" class="h-8 mb-2 text-center text-sm font-bold text-gray-600 min-h-[1.5rem] transition-all duration-300">
+        請找出所有的質數！
+    </div>
+
+    <!-- Game Grid -->
+    <div class="game-container w-full">
+        <div id="game-grid" class="grid grid-cols-10 gap-2 sm:gap-3">
+            <!-- Generated by JS -->
+        </div>
+    </div>
+
+    <!-- Start / Game Over Modal -->
+    <div id="modal" class="fixed inset-0 modal-overlay z-50 flex justify-center items-center">
+        <div class="bg-white p-8 rounded-3xl shadow-2xl text-center max-w-sm w-full border-4 border-blue-100 transform transition-all scale-100">
+            <div class="mb-6">
+                <div class="w-20 h-20 bg-yellow-400 rounded-full flex items-center justify-center mx-auto mb-4 text-4xl shadow-lg text-white">
+                    🏆
+                </div>
+                <h1 id="modal-title" class="text-3xl font-black text-gray-800 mb-2">質數大挑戰</h1>
+                <p id="modal-desc" class="text-gray-600">找出 1~100 中所有的 25 個質數！<br>點錯會扣時間喔！</p>
+                <div id="final-stats" class="hidden mt-4 py-4 bg-gray-50 rounded-xl">
+                    <p class="text-sm text-gray-500">最終得分</p>
+                    <p id="final-score" class="text-4xl font-black text-blue-600">0</p>
+                </div>
+            </div>
+            <button onclick="startGame()" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-4 px-8 rounded-xl shadow-lg transform transition hover:-translate-y-1 hover:shadow-xl active:translate-y-0 active:shadow-md text-xl">
+                開始遊戲
+            </button>
+        </div>
+    </div>
+
+    <!-- Confetti Canvas (Hidden by default) -->
+    <canvas id="confetti" class="fixed inset-0 pointer-events-none z-40"></canvas>
+
     <script>
-        // Setup Tone.js for sounds
-        const correctSynth = new Tone.Synth().toDestination();
-        const wrongSynth = new Tone.Synth({
-            oscillator: { type: "square" },
-            envelope: {
-                attack: 0.001,
-                decay: 0.1,
-                sustain: 0,
-                release: 0.1
+        // Game State
+        const TOTAL_PRIMES = 25;
+        const INITIAL_TIME = 0; // Count up timer
+        
+        let gameState = {
+            isPlaying: false,
+            score: 0,
+            found: 0,
+            startTime: 0,
+            timerInterval: null,
+            foundPrimes: new Set()
+        };
+
+        const primes = new Set([
+            2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 
+            31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 
+            73, 79, 83, 89, 97
+        ]);
+
+        // DOM Elements
+        const gridEl = document.getElementById('game-grid');
+        const timerEl = document.getElementById('timer');
+        const scoreEl = document.getElementById('score');
+        const foundEl = document.getElementById('found-count');
+        const messageEl = document.getElementById('message-bar');
+        const modalEl = document.getElementById('modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalDesc = document.getElementById('modal-desc');
+        const finalStats = document.getElementById('final-stats');
+        const finalScoreEl = document.getElementById('final-score');
+
+        // Initialize Grid
+        function initGrid() {
+            gridEl.innerHTML = '';
+            for (let i = 1; i <= 100; i++) {
+                const btn = document.createElement('button');
+                btn.textContent = i;
+                btn.className = 'number-btn';
+                btn.dataset.number = i;
+                btn.onclick = () => handleNumberClick(i, btn);
+                gridEl.appendChild(btn);
             }
-        }).toDestination();
+        }
 
-        // Get all the DOM elements
-        const startScreen = document.getElementById('start-screen');
-        const gameScreen = document.getElementById('game-screen');
-        const finishScreen = document.getElementById('finish-screen');
-        const startButton = document.getElementById('start-button');
-        const submitButton = document.getElementById('submit-button');
-        const restartButton = document.getElementById('restart-button');
-        const nextQuestionButton = document.getElementById('next-question-button');
-        const nextQuestionContainer = document.getElementById('next-question-container');
-        const num1Span = document.getElementById('num1');
-        const num2Span = document.getElementById('num2');
-        const answerInput = document.getElementById('answer-input');
-        const scoreSpan = document.getElementById('score');
-        const scoreGameSpan = document.getElementById('score-game');
-        const scoreFinishSpan = document.getElementById('score-finish');
-        const feedbackMessage = document.getElementById('feedback-message');
-        const correctAnswerDisplay = document.getElementById('correct-answer-display');
-        const verticalMultiplication = document.getElementById('vertical-multiplication');
-        const timeTakenDisplay = document.getElementById('time-taken');
-        const leaderboardEntry = document.getElementById('leaderboard-entry');
-        const playerNameInput = document.getElementById('player-name');
-        const submitScoreButton = document.getElementById('submit-score-button');
-        const leaderboardBody = document.getElementById('leaderboard-body');
-        const teacherEmoji = document.getElementById('teacher-emoji');
-        
-        const LEADERBOARD_KEY = 'multiplication_leaderboard';
+        // Start Game
+        function startGame() {
+            // Reset State
+            gameState.isPlaying = true;
+            gameState.score = 0;
+            gameState.found = 0;
+            gameState.foundPrimes.clear();
+            gameState.startTime = Date.now();
+            
+            // Reset UI
+            updateUI();
+            initGrid();
+            modalEl.classList.add('hidden');
+            messageEl.textContent = "遊戲開始！找出所有質數！";
+            messageEl.className = "h-8 mb-2 text-center text-sm font-bold text-gray-600";
 
-        let questions = [];
-        let score = 0;
-        let correctCount = 0;
-        let startTime = 0;
-        let finalTime = 0;
-        let currentRank = 0;
+            // Start Timer
+            if (gameState.timerInterval) clearInterval(gameState.timerInterval);
+            gameState.timerInterval = setInterval(updateTimer, 100);
+        }
 
-        const teacherEmojis = ["(^_−)☆", "(*^_^*)", "(⌒▽⌒)", "(・ω・)", "(๑>◡<๑)", "( ´ ▽ ` )ﾉ", "(^_^)/"];
-        
-        // Generate a new multiplication question
-        function generateQuestion(isRoundNumber = false) {
-            if (isRoundNumber) {
-                const type = Math.random() < 0.5 ? 'tens' : 'hundreds';
-                let num1 = Math.floor(Math.random() * 900) + 100;
-                let num2 = Math.floor(Math.random() * 90) + 10;
-                if (type === 'tens') {
-                    num2 = (Math.floor(Math.random() * 9) + 1) * 10;
-                } else {
-                    num1 = (Math.floor(Math.random() * 9) + 1) * 100;
-                    num2 = (Math.floor(Math.random() * 9) + 1) * 10;
-                }
-                return {
-                    num1,
-                    num2,
-                    answer: num1 * num2
-                };
+        // Timer Logic
+        function updateTimer() {
+            const delta = Date.now() - gameState.startTime;
+            const seconds = Math.floor(delta / 1000);
+            const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+            const secs = (seconds % 60).toString().padStart(2, '0');
+            timerEl.textContent = `${mins}:${secs}`;
+        }
+
+        // Interaction Logic
+        function handleNumberClick(num, btn) {
+            if (!gameState.isPlaying) return;
+            if (gameState.foundPrimes.has(num)) return; // Already clicked
+
+            // Prevent double clicking while animating wrong
+            if (btn.classList.contains('wrong')) return;
+
+            if (primes.has(num)) {
+                // Correct
+                btn.classList.add('correct');
+                gameState.found++;
+                gameState.foundPrimes.add(num);
+                gameState.score += 100;
+                messageEl.textContent = `太棒了！ ${num} 是質數！`;
+                messageEl.className = "h-8 mb-2 text-center text-sm font-bold text-green-600";
+                
+                checkWin();
             } else {
-                const num1 = Math.floor(Math.random() * 900) + 100; // 100-999
-                const num2 = Math.floor(Math.random() * 90) + 10;   // 10-99
-                return {
-                    num1,
-                    num2,
-                    answer: num1 * num2
-                };
+                // Wrong
+                btn.classList.add('wrong');
+                gameState.score = Math.max(0, gameState.score - 50);
+                
+                // Add penalty time (visual only, logic is score based really)
+                // Or just shake and show message
+                let msg = "";
+                if (num === 1) msg = "小心！1 不是質數喔！";
+                else if (num % 2 === 0) msg = `${num} 是偶數，除了 2 以外偶數都不是質數！`;
+                else if (num % 5 === 0) msg = `${num} 是 5 的倍數，不是質數！`;
+                else msg = `哎呀，${num} 是合數！`;
+
+                messageEl.textContent = msg;
+                messageEl.className = "h-8 mb-2 text-center text-sm font-bold text-red-500";
+                
+                // Remove wrong class after animation
+                setTimeout(() => {
+                    btn.classList.remove('wrong');
+                }, 500);
+            }
+            updateUI();
+        }
+
+        function updateUI() {
+            scoreEl.textContent = gameState.score;
+            foundEl.textContent = gameState.found;
+        }
+
+        function checkWin() {
+            if (gameState.found === TOTAL_PRIMES) {
+                endGame(true);
             }
         }
 
-        // Generate the initial set of questions
-        function generateQuestions(count) {
-            questions = [];
-            questions.push(generateQuestion(true)); // First question is a round number
-            questions.push(generateQuestion(true)); // Second question is a round number
-            for (let i = 2; i < count; i++) {
-                questions.push(generateQuestion());
-            }
-        }
-
-        // Show the next question or the finish screen
-        function showNextQuestion() {
-            if (correctCount >= 6) {
-                showFinishScreen();
-                return;
-            }
-            correctAnswerDisplay.classList.add('hidden');
+        function endGame(win) {
+            gameState.isPlaying = false;
+            clearInterval(gameState.timerInterval);
             
-            const currentQuestion = questions.shift();
-            if (!currentQuestion) {
-                 questions.push(generateQuestion());
-                 showNextQuestion();
-                 return;
-            }
+            // Calculate time bonus
+            const timeUsed = Math.floor((Date.now() - gameState.startTime) / 1000);
+            const timeBonus = Math.max(0, (300 - timeUsed) * 2); // Bonus for fast play
+            const finalScore = gameState.score + timeBonus;
 
-            num1Span.textContent = currentQuestion.num1;
-            num2Span.textContent = currentQuestion.num2;
-            answerInput.value = '';
-            feedbackMessage.textContent = '';
-            feedbackMessage.classList.remove('animate-success');
-            nextQuestionContainer.classList.add('hidden');
-            submitButton.disabled = false;
-            answerInput.disabled = false;
+            // Show Modal
+            modalTitle.textContent = "恭喜過關！🎉";
+            modalDesc.innerHTML = `你找出了所有質數！<br>耗時：${timerEl.textContent}`;
+            finalScoreEl.textContent = finalScore;
+            finalStats.classList.remove('hidden');
+            modalEl.classList.remove('hidden');
+
+            if (win) launchConfetti();
         }
 
-        // Display the vertical multiplication breakdown
-        function showVerticalMultiplication(num1, num2) {
-            const result = num1 * num2;
-            const line1 = num1.toString().padStart(6);
-            const line2 = '× ' + num2.toString().padStart(4);
+        // Simple Confetti
+        function launchConfetti() {
+            const canvas = document.getElementById('confetti');
+            const ctx = canvas.getContext('2d');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
             
-            const partial1 = (num1 * (num2 % 10)).toString();
-            const partial2 = (num1 * Math.floor(num2 / 10)).toString();
-            const line4 = partial1.padStart(6);
-            const line5 = partial2.padStart(6 - 1) + '0';
-            const line6 = '-'.repeat(6);
-            const line7 = result.toString().padStart(6);
-            
-            verticalMultiplication.innerHTML = `
-                <div class="text-right">${line1}</div>
-                <div class="text-right">${line2}</div>
-                <div class="vertical-line"></div>
-                <div class="text-right">${line4}</div>
-                <div class="text-right">${line5}</div>
-                <div class="vertical-line"></div>
-                <div class="text-right font-bold text-green-700 text-2xl">${line7}</div>
-            `;
-            
-        }
-        
-        // Play sound for correct answer
-        function playCorrectSound() {
-            correctSynth.triggerAttackRelease("C5", "8n");
-        }
-
-        // Play sound for wrong answer
-        function playWrongSound() {
-            wrongSynth.triggerAttackRelease("C3", "8n");
-        }
-
-        // Check the user's answer
-        function checkAnswer() {
-            const userAnswer = parseInt(answerInput.value, 10);
-            if (isNaN(userAnswer)) {
-                feedbackMessage.textContent = '請輸入一個數字！';
-                feedbackMessage.className = 'mt-4 text-center text-red-500 text-xl font-semibold';
-                return;
+            const pieces = [];
+            for(let i=0; i<100; i++) {
+                pieces.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height - canvas.height,
+                    color: `hsl(${Math.random()*360}, 100%, 50%)`,
+                    size: Math.random() * 8 + 4,
+                    speed: Math.random() * 5 + 2
+                });
             }
 
-            const currentQuestion = {
-                num1: parseInt(num1Span.textContent),
-                num2: parseInt(num2Span.textContent),
-                answer: parseInt(num1Span.textContent) * parseInt(num2Span.textContent)
-            };
-
-            if (userAnswer === currentQuestion.answer) {
-                feedbackMessage.textContent = '答對了！';
-                feedbackMessage.className = 'mt-4 text-center text-green-600 text-xl font-semibold animate-success';
-                playCorrectSound();
-                score++;
-                correctCount++;
-                scoreSpan.textContent = correctCount;
-                scoreGameSpan.textContent = correctCount;
-                submitButton.disabled = true;
-                answerInput.disabled = true;
-                setTimeout(showNextQuestion, 1000);
-            } else {
-                feedbackMessage.textContent = '答錯了，請看正確答案。';
-                feedbackMessage.className = 'mt-4 text-center text-red-600 text-xl font-semibold';
-                playWrongSound();
-                correctAnswerDisplay.classList.remove('hidden'); // Ensure the display is not hidden
-                showVerticalMultiplication(currentQuestion.num1, currentQuestion.num2);
-                nextQuestionContainer.classList.remove('hidden');
-                submitButton.disabled = true;
-                answerInput.disabled = true;
+            let animationId;
+            function animate() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                let active = false;
+                pieces.forEach(p => {
+                    p.y += p.speed;
+                    if(p.y < canvas.height) active = true;
+                    ctx.fillStyle = p.color;
+                    ctx.fillRect(p.x, p.y, p.size, p.size);
+                });
+                if(active) animationId = requestAnimationFrame(animate);
+                else setTimeout(() => ctx.clearRect(0, 0, canvas.width, canvas.height), 100);
             }
+            animate();
         }
 
-        // Show the final screen with time taken and leaderboard
-        function showFinishScreen() {
-            const endTime = Date.now();
-            finalTime = Math.round((endTime - startTime) / 1000);
-            timeTakenDisplay.textContent = `你的完成時間是：${finalTime} 秒`;
-            
-            // 隨機選取顏文字
-            const randomIndex = Math.floor(Math.random() * teacherEmojis.length);
-            teacherEmoji.textContent = teacherEmojis[randomIndex];
-            
-            gameScreen.classList.add('hidden');
-            finishScreen.classList.remove('hidden');
-            leaderboardEntry.classList.remove('hidden');
-            scoreFinishSpan.textContent = correctCount;
-            
-            // 載入並顯示排行榜
-            loadAndDisplayLeaderboard();
-        }
+        // Initial setup
+        initGrid();
 
-        // Display the leaderboard from localStorage
-        function displayLeaderboard(leaderboard) {
-            leaderboardBody.innerHTML = '';
-            leaderboard.forEach((entry, index) => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td class="rounded-bl-lg">${index + 1}</td>
-                    <td>${entry.name}</td>
-                    <td class="rounded-br-lg">${entry.time}</td>
-                `;
-                leaderboardBody.appendChild(row);
-            });
-            // Find current rank for encouragement message
-            const myRank = leaderboard.findIndex(entry => entry.time === finalTime) + 1;
-            currentRank = myRank;
-        }
-
-        // Save the user's score to localStorage
-        function saveScore() {
-            const playerName = playerNameInput.value.trim() || '匿名玩家';
-            
-            // 獲取現有的排行榜資料
-            let leaderboard = JSON.parse(localStorage.getItem(LEADERBOARD_KEY)) || [];
-
-            // 加入新的分數
-            leaderboard.push({ name: playerName, time: finalTime });
-
-            // 依時間排序並只保留前十名
-            leaderboard.sort((a, b) => a.time - b.time);
-            leaderboard = leaderboard.slice(0, 10);
-
-            // 儲存回 localStorage
-            localStorage.setItem(LEADERBOARD_KEY, JSON.stringify(leaderboard));
-            
-            // 重新顯示排行榜
-            displayLeaderboard(leaderboard);
-            leaderboardEntry.classList.add('hidden');
-        }
-
-        // Load and display leaderboard on page load
-        function loadAndDisplayLeaderboard() {
-            const leaderboard = JSON.parse(localStorage.getItem(LEADERBOARD_KEY)) || [];
-            displayLeaderboard(leaderboard);
-        }
-
-        // Reset the game to the starting state
-        function resetGame() {
-            score = 0;
-            correctCount = 0;
-            scoreSpan.textContent = correctCount;
-            scoreGameSpan.textContent = correctCount;
-            scoreFinishSpan.textContent = correctCount;
-            startScreen.classList.remove('hidden');
-            gameScreen.classList.add('hidden');
-            finishScreen.classList.add('hidden');
-            leaderboardEntry.classList.add('hidden');
-            playerNameInput.value = '';
-            generateQuestions(6);
-            showNextQuestion();
-            loadAndDisplayLeaderboard();
-        }
-        
-        // Event Listeners
-        startButton.addEventListener('click', () => {
-            startScreen.classList.add('hidden');
-            gameScreen.classList.remove('hidden');
-            startTime = Date.now();
-            generateQuestions(6);
-            showNextQuestion();
-        });
-
-        submitButton.addEventListener('click', checkAnswer);
-        restartButton.addEventListener('click', resetGame);
-        nextQuestionButton.addEventListener('click', showNextQuestion);
-        submitScoreButton.addEventListener('click', saveScore);
-
-        answerInput.addEventListener('keydown', (event) => {
-            if (event.key === 'Enter') {
-                checkAnswer();
-            }
-        });
-        
-        // 頁面載入時載入排行榜
-        window.onload = loadAndDisplayLeaderboard;
     </script>
-
 </body>
 </html>
