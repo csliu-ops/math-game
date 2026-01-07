@@ -195,10 +195,10 @@
                 btn.classList.add('animate-shake', 'composite-wrong');
                 
                 let hint = `哎呀，${num} 不是質數。`;
-                if (num === 1) hint = "小心！1 既不是質數，也不是合數。";
-                else if (num % 2 === 0 && num !== 2) hint = "提示：除了 2 以外，所有偶數都是合數。";
+                if (num === 1) hint = "小心！1 既不是質數，也不是合成數。";
+                else if (num % 2 === 0 && num !== 2) hint = "提示：除了 2 以外，所有偶數都是合成數。";
                 else if (num % 5 === 0 && num !== 5) hint = "提示：5 的倍數（除了 5）都不是質數。";
-                else if (num % 3 === 0 && num !== 3) hint = "提示：這個數可以被 3 整除，所以是合數。";
+                else if (num % 3 === 0 && num !== 3) hint = "提示：這個數可以被 3 整除，所以是合成數。";
                 
                 updateFeedback(hint, 'error');
                 updateStats();
@@ -249,3 +249,4 @@
     </script>
 </body>
 </html>
+
